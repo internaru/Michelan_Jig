@@ -1,0 +1,6 @@
+/build
+/dist
+/snapshot
+/.vscode
+/__pycache__
+workspace.code-workspace
