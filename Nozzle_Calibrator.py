@@ -222,18 +222,22 @@ class WindowClass(QMainWindow, form_class) :
             self.nozzle_offset['y'] = self.nozzle_position['N2_y'] - self.nozzle_position['N1_y']
 
     def displayHole(self, image):
+        # line
         print('displayHole')
         cv2.line(self.RIO_img, (self.ROI_hole['x'], 0), (self.ROI_hole['x'], self.ROI['size']), (0, 0, 255), 1)
         cv2.line(self.RIO_img, (0, self.ROI_hole['y']), (self.ROI['size'], self.ROI_hole['y']), (0, 0, 255), 1)
+        # cross
         if self.Step == 6:
-            nozzle1_x = self.nozzle_position['N1_x'] - self.ROI['x'] + self.ROI_offset['x']
-            nozzle1_y = self.nozzle_position['N1_y'] - self.ROI['y'] + self.ROI_offset['y']
-            cv2.line(self.RIO_img, (nozzle1_x-5, nozzle1_y), (nozzle1_x+5, nozzle1_y), (0, 255, 0), 2)
-            cv2.line(self.RIO_img, (nozzle1_x, nozzle1_y-5), (nozzle1_x, nozzle1_y+5), (0, 255, 0), 2)
-            nozzle1_x = self.nozzle_position['N2_x'] - self.ROI['x'] + self.ROI_offset['x']
-            nozzle1_y = self.nozzle_position['N2_y'] - self.ROI['y'] + self.ROI_offset['y']
-            cv2.line(self.RIO_img, (nozzle1_x-5, nozzle1_y), (nozzle1_x+5, nozzle1_y), (0, 255, 0), 2)
-            cv2.line(self.RIO_img, (nozzle1_x, nozzle1_y-5), (nozzle1_x, nozzle1_y+5), (0, 255, 0), 2)
+            # nozzle 1
+            nozzle_x = self.ROI_hole['x'] - self.nozzle_offset['x'] 
+            nozzle_y = self.ROI_hole['y'] - self.nozzle_offset['y'] 
+            cv2.line(self.RIO_img, (nozzle_x-5, nozzle_y), (nozzle_x+5, nozzle_y), (0, 255, 0), 2)
+            cv2.line(self.RIO_img, (nozzle_x, nozzle_y-5), (nozzle_x, nozzle_y+5), (0, 255, 0), 2)
+            # nozzle 2
+            nozzle_x = self.ROI_hole['x']
+            nozzle_y = self.ROI_hole['y']
+            cv2.line(self.RIO_img, (nozzle_x-5, nozzle_y), (nozzle_x+5, nozzle_y), (0, 255, 0), 2)
+            cv2.line(self.RIO_img, (nozzle_x, nozzle_y-5), (nozzle_x, nozzle_y+5), (0, 255, 0), 2)
         self.showROI(self.RIO_img)
 
     def updateInfo(self):
@@ -412,12 +416,12 @@ class WindowClass(QMainWindow, form_class) :
                 cv2.imshow(method_name, img_draw)
                 cv2.setMouseCallback(method_name, self.mouse_callback)
 
+                self.Matching_Offset['x'] = self.Matching_Offset['y'] = self.Matching_Offset['mouse_clicked'] = 0
+                shape_change = False
+
                 # Save result
                 self.ROI_hole['x'] = round((top_left[0]+bottom_right[0])/2) + self.Matching_Offset['x']
                 self.ROI_hole['y'] = round((top_left[1]+bottom_right[1])/2) + self.Matching_Offset['y']
-
-                self.Matching_Offset['x'] = self.Matching_Offset['y'] = self.Matching_Offset['mouse_clicked'] = 0
-                shape_change = False
 
                 while True: 
                     

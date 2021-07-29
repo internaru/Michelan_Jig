@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Nozzle Calibrator (Ver1.1)</string>
+   <string>Nozzle Calibrator (Ver1.2)</string>
   </property>
   <property name="toolTip">
    <string>Michelan Jig for Nozzle Positioning</string>
