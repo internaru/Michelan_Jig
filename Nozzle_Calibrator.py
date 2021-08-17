@@ -7,6 +7,11 @@ import cv2, imutils
 import numpy as np
 import math
 from matplotlib import pyplot as plt
+import logging
+import winsound
+
+camera_type = 2                    # 1 : 1920x1080, 2 : 3840x2160
+nozzle1_shift = 250*1*camera_type  # nozzle1 shift pixels to calculate weight
 
 #UI파일 연결
 #단, UI파일은 Python 코드 파일과 같은 디렉토리에 위치해야한다.
@@ -55,46 +60,67 @@ class WindowClass(QMainWindow, form_class) :
         self.ROI_hole = {'name':'ROI_hole', 'x':0, 'y':0}
         self.nozzle_position = {'name':'nozzle_position', 'N1_x':0, 'N1_y':0, 'N1_1_x':0, 'N1_1_y':0, 'N2_x':0, 'N2_y':0} # base on entire image
         self.nozzle_offset = {'name':'nozzle_offset', 'x':0, 'y':0}
+        self.ROI['x'] = camera_type*self.ROI['x']
+        self.ROI['y'] = camera_type*self.ROI['y']
+        self.ROI['size'] = camera_type*self.ROI['size']
 
     def loadImage(self):
         print('loadImage')
         print(self.ROI, self.ROI_offset, self.ROI_hole, self.nozzle_position, self.nozzle_offset, sep='\n')
 
         # Get Image From File
-        self.filename = QFileDialog.getOpenFileName(filter="Image (*.*)")[0]
+        if self.checkBox_Camera.isChecked() == True:
+            if self.getFileNameFromCamera(0) == True:
+                self.filename = "captured.png"
+            else:
+                self.filename = 0
+        else:
+            self.filename = QFileDialog.getOpenFileName(filter="Image (*.*)")[0]
         print('file name1 : ', self.filename)
 
         if self.filename:
             self.updateStep()
             self.readImage()
             self.reloadROI()
-            # Check Image Size
-            H, W = self.image.shape[:2]
 
             # Check Image Size
-            if self.Step == 3:
-                self.ROI_offset = {'name':'ROI_offset', 'x':-250, 'y':0}
+            if self.checkImgSize() == True:
+                # Set offset
+                if self.Step == 3:
+                    self.ROI_offset = {'name':'ROI_offset', 'x':-nozzle1_shift, 'y':0}
+                else:
+                    self.ROI_offset = {'name':'ROI_offset', 'x':0, 'y':0}
+
+                # Crop Image into ROI            
+                StartY = self.ROI['y'] + self.ROI_offset['y']
+                EndY = StartY + self.ROI['size']
+                StartX = self.ROI['x'] + self.ROI_offset['x']
+                EndX = StartX + self.ROI['size']
+                self.RIO_img = self.image[StartY:EndY, StartX:EndX]
+                
+                # Camera Image Display
+                self.showImage(self.image)
+                
+                # ROI Image Display
+                self.showROI(self.RIO_img)
+                
+                # Information Display
+                self.updateInfo()
+                self.updateProgressBar()
             else:
-                self.ROI_offset = {'name':'ROI_offset', 'x':0, 'y':0}
-
-            # Crop Image into ROI            
-            StartY = self.ROI['y'] + self.ROI_offset['y']
-            EndY = StartY + self.ROI['size']
-            StartX = self.ROI['x'] + self.ROI_offset['x']
-            EndX = StartX + self.ROI['size']
-            self.RIO_img = self.image[StartY:EndY, StartX:EndX]
-            
-            # Camera Image Display
-            self.showImage(self.image)
-            
-            # ROI Image Display
-            self.showROI(self.RIO_img)
-            
-            # Information Display
-            self.updateInfo()
-            self.updateProgressBar()
+                QMessageBox.warning(self, "message", "Check Camera Resolution or Image Size!!")
         else:
-            QMessageBox.warning(self, "message", "Choose any image")
+            QMessageBox.warning(self, "message", "User Cancel")
+    
+    def checkImgSize(self):
+        print('checkImgSize')
+        H, W, Ch = self.image.shape
+        print('ImgSize : ', W, H)
+        if W != 1920*camera_type or H != 1080*camera_type:
+            QMessageBox.warning(self, "message", "Not supporte Image Size : {0}x{1} ".format(W, H))
+            return False
+        else:
+            return True
 
     def drawRectangle(self, image):
         print('drawRectangle')
@@ -153,7 +179,7 @@ class WindowClass(QMainWindow, form_class) :
         filename = QFileDialog.getSaveFileName(filter="JPG(*.jpg);;PNG(*.png);;TIFF(*.tiff);;BMP(*.bmp)")[0]
 
         cv2.imwrite(filename, self.RIO_img)
-        print('Image saved as:', self.filename)
+        print('Image saved as:', filename)
 
     def Detect(self):
         print('Detect')
@@ -370,14 +396,104 @@ class WindowClass(QMainWindow, form_class) :
         else:
             self.MatchingType = "circle"
             print('Matching : circle')
+
+    def getFileNameFromCamera(self, id):
+        capture = cv2.VideoCapture(id, cv2.CAP_DSHOW)
+        if capture.isOpened():
+            print ('isOpened OK')
+        else:
+            print ('isOpened NG')
+            QMessageBox.critical(self, "message", "Fail to open camera")
+            return False
+
+        # Get Info
+        print('Frame width:', int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)))
+        print('Frame height:', int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        print('Frame count:', int(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
+        print('FPS:', int(capture.get(cv2.CAP_PROP_FPS)))
+
+        # Setup
+        #capture.set(cv2.CAP_PROP_FRAME_WIDTH, 3840)
+        #capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
+        #capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        #capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        #capture.set(cv2.CAP_PROP_FPS, 10)
+
+        print ('Show Frame')
+
+        while True:
             
+            ret, frame = capture.read()  # blank frame in case of high resolution
+            ret, frame = capture.read()  # normal frame
+            if frame is None:
+                print ('Fail to read frame!!')
+                break
+            
+            W = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            H = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        
+            if int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) > 640:
+                img = imutils.resize(frame, width=1280)
+                cv2.putText(img, 'Capture mode :'+str(W)+'x'+str(H), (10, 30), \
+                            cv2.FONT_HERSHEY_PLAIN, 2.0, (0,0,255), 1, cv2.LINE_AA)
+                cv2.putText(img, 'Press Enter key to capture', (10, 60), \
+                            cv2.FONT_HERSHEY_PLAIN, 2.0, (0,0,255), 1, cv2.LINE_AA)
+                cv2.imshow('VideoCapture', img)
+            else:
+                cv2.putText(frame, 'Video mode :'+str(W)+'x'+str(H), (10, 30), \
+                            cv2.FONT_HERSHEY_PLAIN, 2.0, (255,0,0), 1, cv2.LINE_AA)
+                cv2.putText(frame, 'Spacebar : Capture mode'+'\n'+'Esc : Exit', (10, 60), \
+                            cv2.FONT_HERSHEY_PLAIN, 2.0, (255,0,0), 1, cv2.LINE_AA)
+                cv2.imshow('VideoCapture', frame)
+
+            key = cv2.waitKey(10)
+            if key == 13:   # enter key
+                if int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) > 640:
+                    winsound.PlaySound("shutter.wav", winsound.SND_ASYNC)
+                    cv2.imwrite('Captured.png',frame, params=[cv2.IMWRITE_PNG_COMPRESSION,0])
+                    logging.debug ("Save done!!")
+                    break
+                else:
+                    QMessageBox.critical(self, "message", "Try again in Capture mode")
+                    continue
+
+            if key == ord('q') or key == 27:
+                logging.debug ("Exit without capture!!")
+                break
+            
+            #if key == 27:   # esc key
+            if key == 32:   # spacebar key
+                capture.release()
+                capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                capture.set(cv2.CAP_PROP_FRAME_WIDTH, 3840) # 3840 x 2160, 2592 x 1944, 2048 x 1536...640 x 480
+                capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 2160)
+
+                print('Frame width:', int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)))
+                print('Frame height:', int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        
+        print ('loop exit')
+
+        if int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)) > 640 and (key == 13) :
+            result = True
+        else:
+            result = False
+        
+        capture.release()
+        cv2.destroyAllWindows()
+
+        return result
+
 #######################################################################################
     def patternMatching(self):
         print('patternMatching')
 
         # 입력이미지와 템플릿 이미지 읽기
         img = self.RIO_img
-        template = cv2.imread('./Images/hole_22x22.jpg')
+        if camera_type == 1:
+            template = cv2.imread('./Images/hole_22x22.jpg')
+        else:
+            template = cv2.imread('./Images/hole_44x44.jpg')
+
         if (type(template) is np.ndarray):
             th, tw = template.shape[:2]
 
@@ -488,8 +604,8 @@ class WindowClass(QMainWindow, form_class) :
         if event == cv2.EVENT_LBUTTONDOWN: 
             mouse_is_pressing = True
             # Save result
-            self.Matching_Offset['x'] = round(x/4)
-            self.Matching_Offset['y'] = round(y/4)
+            self.Matching_Offset['x'] = camera_type*round(x/4)
+            self.Matching_Offset['y'] = camera_type*round(y/4)
             self.Matching_Offset['mouse_clicked'] = 1
             self.ROI_hole['x'] = self.Matching_Offset['x']
             self.ROI_hole['y'] = self.Matching_Offset['y']
