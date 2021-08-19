@@ -436,14 +436,18 @@ class WindowClass(QMainWindow, form_class) :
                 img = imutils.resize(frame, width=1280)
                 cv2.putText(img, 'Capture mode :'+str(W)+'x'+str(H), (10, 30), \
                             cv2.FONT_HERSHEY_PLAIN, 2.0, (0,0,255), 1, cv2.LINE_AA)
-                cv2.putText(img, 'Press Enter key to capture', (10, 60), \
-                            cv2.FONT_HERSHEY_PLAIN, 2.0, (0,0,255), 1, cv2.LINE_AA)
+                cv2.putText(img, '  - Enter key : Capture Screen', (10, 60), \
+                            cv2.FONT_HERSHEY_PLAIN, 1.5, (0,0,255), 1, cv2.LINE_AA)
+                cv2.putText(img, '  - Esc : Exit', (10, 90), \
+                            cv2.FONT_HERSHEY_PLAIN, 1.5, (0,0,255), 1, cv2.LINE_AA)    
                 cv2.imshow('VideoCapture', img)
             else:
                 cv2.putText(frame, 'Video mode :'+str(W)+'x'+str(H), (10, 30), \
-                            cv2.FONT_HERSHEY_PLAIN, 2.0, (255,0,0), 1, cv2.LINE_AA)
-                cv2.putText(frame, 'Spacebar : Capture mode'+'\n'+'Esc : Exit', (10, 60), \
-                            cv2.FONT_HERSHEY_PLAIN, 2.0, (255,0,0), 1, cv2.LINE_AA)
+                            cv2.FONT_HERSHEY_PLAIN, 2.0, (0,255,0), 1, cv2.LINE_AA)
+                cv2.putText(frame, '  - Spacebar : Capture mode', (10, 60), \
+                            cv2.FONT_HERSHEY_PLAIN, 1.5, (0,255,0), 1, cv2.LINE_AA)
+                cv2.putText(frame, '  - Esc : Exit', (10, 90), \
+                            cv2.FONT_HERSHEY_PLAIN, 1.5, (0,255,0), 1, cv2.LINE_AA)    
                 cv2.imshow('VideoCapture', frame)
 
             key = cv2.waitKey(10)
