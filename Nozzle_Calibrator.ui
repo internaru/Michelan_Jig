@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>937</width>
-    <height>875</height>
+    <width>941</width>
+    <height>927</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -764,13 +764,47 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QGroupBox" name="groupBox_Result">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>840</y>
+      <width>421</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Calibration Result</string>
+    </property>
+    <widget class="QLabel" name="label_Result">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>401</width>
+       <height>19</height>
+      </rect>
+     </property>
+     <property name="font">
+      <font>
+       <family>Adobe Caslon Pro</family>
+       <pointsize>14</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>No Result</string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>937</width>
+     <width>941</width>
      <height>21</height>
     </rect>
    </property>

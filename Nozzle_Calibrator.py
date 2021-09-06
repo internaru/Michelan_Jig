@@ -278,6 +278,7 @@ class WindowClass(QMainWindow, form_class) :
         nozzle_offset_pxl = '(x:{0} y:{1})'.format(self.nozzle_offset['x'], self.nozzle_offset['y'])
         nozzle_offset_mm = '(x:{0:.3f} y:{1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], self.weight['Weight']*self.nozzle_offset['y'])
         weight = '{0:.3f} (x_diff:{1}, y_diff:{2})'.format(self.weight['Weight'], self.weight['x_diff'], self.weight['y_diff'])
+        final_result = '(x : {0:.3f} y : {1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], -self.weight['Weight']*self.nozzle_offset['y'])
 
         # File Path
         self.label_FileName.setText(path)
@@ -293,13 +294,15 @@ class WindowClass(QMainWindow, form_class) :
         self.label_Nozzle_Offset_pxl.setText(nozzle_offset_pxl)
         self.label_Nozzle_Offset_mm.setText(nozzle_offset_mm)
         self.label_Weight.setText(weight)
+        self.label_Result.setText(final_result)
         if self.Step == 6:
             self.label_Nozzle_Position1.setStyleSheet("Color : blue")
             self.label_Nozzle_Position1_1.setStyleSheet("Color : blue")
             self.label_Nozzle_Position2.setStyleSheet("Color : blue")
-            self.label_Nozzle_Offset_pxl.setStyleSheet("Color : red")
-            self.label_Nozzle_Offset_mm.setStyleSheet("Color : red")
+            self.label_Nozzle_Offset_pxl.setStyleSheet("Color : green")
+            self.label_Nozzle_Offset_mm.setStyleSheet("Color : green")
             self.label_Weight.setStyleSheet("Color : green")
+            self.label_Result.setStyleSheet("Color : red")
         else:
             self.label_Nozzle_Position1.setStyleSheet("Color : black")
             self.label_Nozzle_Position1_1.setStyleSheet("Color : black")
@@ -307,6 +310,7 @@ class WindowClass(QMainWindow, form_class) :
             self.label_Nozzle_Offset_pxl.setStyleSheet("Color : black")
             self.label_Nozzle_Offset_mm.setStyleSheet("Color : black")
             self.label_Weight.setStyleSheet("Color : black")
+            self.label_Result.setStyleSheet("Color : black")
 
     def updateStep(self):
         print('self.Step (before):', self.Step)
@@ -376,7 +380,7 @@ class WindowClass(QMainWindow, form_class) :
             else:
                 QMessageBox.warning(self, "message", "Undefined Offset direction, try again at the beginning")
         else:
-            QMessageBox.warning(self, "message", "ROI position can be adjusted only Step1,3")
+            QMessageBox.warning(self, "message", "ROI position can be adjusted only Step1,3,5")
 
         # Camera Image Display
         self.readImage()
@@ -712,3 +716,11 @@ if __name__ == "__main__" :
     myWindow = WindowClass() 
     myWindow.show()
     app.exec_()
+
+# https://gozz123.tistory.com/29
+# https://github-wiki-see.page/m/8BitsCoding/RobotMentor/wiki/python_pyserial
+# https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=chandong83&logNo=221156763486
+# https://m.blog.naver.com/rhukjin/222040320807
+# https://wikidocs.net/16035 byte화
+# https://python.hotexamples.com/examples/serial/Serial/flush/python-serial-flush-method-examples.html
+# https://enjoytools.net/xe/board_PZRP31/5125 thread 이용
