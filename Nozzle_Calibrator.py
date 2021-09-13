@@ -25,7 +25,7 @@ form_class = uic.loadUiType("Nozzle_Calibrator.ui")[0]
 class WindowClass(QMainWindow, form_class) :
     def __init__(self) :
         super().__init__()
-        self.setupUi(self)
+        self.setupUi(self)  # To use Qt Designer .ui file
 
         #버튼에 기능을 연결하는 코드
         self.pushButton_Open1.clicked.connect(self.loadImage)
@@ -42,6 +42,8 @@ class WindowClass(QMainWindow, form_class) :
         self.toolButton_Down.clicked.connect(self.set_RIO_Offset)
         self.toolButton_Left.clicked.connect(self.set_RIO_Offset)
         self.toolButton_Right.clicked.connect(self.set_RIO_Offset)
+
+        self.pushButton_Serial.clicked.connect(self.serial_comm)
                 
         self.Step = 0
         self.MatchingType = "pattern"   # 0:Pattern Matching, 1:Circle Matching
@@ -57,16 +59,18 @@ class WindowClass(QMainWindow, form_class) :
         self.weight = {'name':'weight', 'x_diff':0, 'y_diff':0, 'Weight':0.0}  # 0.02 (10mm = 500 pixel)
 
         # Serial Comunication
-        self.queue = queue.Queue()
-        self.thread = SerialThread(self.queue)
-        self.thread.start()
-        self.on_send(Packet_Tx['CMD_PING_REQ'])
+        #self.queue = queue.Queue()
+        #self.thread = SerialThread(self.queue)
+        #self.thread.start()
+        #self.on_send(Packet_Tx['CMD_PING_REQ'])
+        
+    def serial_comm(self):
+        self.hide()
+        self.SerialCommDlg = SerialDialog()
+        self.SerialCommDlg.show()
 
-    def on_send(self, command):
-        '''
-        Send data via serial port
-        '''
-        SerialThread.write(SerialThread, command)
+    #def on_send(self, command):
+    #    SerialThread.write(SerialThread, command)
 
     def initParam(self):
         print('initParam')
