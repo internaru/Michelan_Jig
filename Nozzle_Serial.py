@@ -5,6 +5,7 @@ import serial.tools.list_ports as sp
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5 import uic
+from PyQt5.QtGui import *
 
 import sys
 
@@ -34,79 +35,42 @@ __platform__ = sys.platform
 
 form_class_serial = uic.loadUiType("Nozzle_Serial.ui")[0]
 
-# # Packet (PC -> Machine)
-# Packet_Tx = {
-#     'CMD_PING_REQ': "&ping_req&",
-#     'CMD_CONNECTED': "&connected&",
-#     'CMD_NOZZLE_OFFSET': "&nozzle_offset&",
-#     }
+# Packet (Machine -> PC)
+Packet_Ack = {
+    'MSG_PING' : "$PING$",
+    'MSG_READY' : "$READY$",
+    }
 
-# # Packet (Machine -> PC)
-# Packet_Rx = {
-#     'MSG_PING' : "$PING$",
-#     'MSG_READY' : "$READY$",
-#     'MSG_WAITING_PARAM' : "$WAITING_PARAM$",
-#     }
-    
-# COM_port = 0
+# Packet (PC -> Machine)
+Packet_Cmd = { 
+    # Command
+    'PING_REQ': "&ping_req&",
+    'SETUP_OFFSET': "&setup_offset&",
+    'MACHINE_CONTROL': "&machine_ctrl&",
+    }
 
-# Rx Thread
-# class SerialThread(threading.Thread):
-#     '''
-#     Control RS-xxx Ports
-#     '''
-#     is_run = False
+Packet_Info = { 
+    # Command
+    'CONNECTED': "&connected&",
+    'PARAM_END': "&param_end&",
+    }
 
-#     list = sp.comports()
-#     connected = []
-#     for i in list:
-#         connected.append(i.device)
+Packet_Param = {
+    # Machine Control
+    'pb_Machine_Abs': ["1", "G90"],
+    'pb_Machine_Move_Home': ["2", "G28"],
+    'pb_Machine_Sel_N1': ["3", "T0"],
+    'pb_Machine_Move_Bed': ["4", "G0", "Z200", "F600"],
+    'pb_Machine_Move_N1': ["5", "G0", "X160", "Y180", "F2400"],
+    'pb_Machine_Move_N1_1': ["6", "G0", "X165", "Y180", "F2400"],
+    'pb_Machine_Sel_N2': ["7", "T1"],
+    'pb_Machine_Move_N2': ["8", "G0", "X160", "Y180", "F2400"],
+    'pb_Machine_Gcode': ["9"],
+    }
 
-#     print("Connected COM ports : " + str(connected))
+color_blue = QColor(0,0,255)
+color_red = QColor(255,0,0)
 
-#     #seq = serial.Serial('COM5', 115200, timeout=1)  # MS-Windows
-#     ch = 5
-#     seq = serial.Serial('COM'+str(ch), 115200, timeout=1)  # MS-Windows
-#     # seq = serial.Serial('/dev/ttyUSB0', 9600) # Linux
-        
-#     def __init__(self, que):
-#         threading.Thread.__init__(self)
-#         self._lock = threading.Lock()
-#         self.queue = que
-        
-#     def connect(self, ch):
-#         print('connect start... :', ch)
-#         self.is_run = True
-#         #self.seq = serial.Serial('COM'+str(ch), 115200, timeout=1)  # MS-Windows
-#         print('connect end... :', ch)
-
-#     def run(self):
-#         print('run...start : ', self.is_run)
-#         while self.is_run:
-#             if self.seq.inWaiting():
-
-#                 res = self.seq.readline(self.seq.inWaiting())
-#                 res_packet = res.decode()[:len(res)-1]
-#                 print('Rx :', res_packet)
-
-#                 if Packet_Rx['MSG_PING'] in res_packet:
-#                     self.write(Packet_Tx['CMD_CONNECTED'])
-#                 elif Packet_Rx['MSG_READY'] in res_packet:
-#                     self.write(Packet_Tx['CMD_NOZZLE_OFFSET'])
-#                 elif Packet_Rx['MSG_WAITING_PARAM'] in res_packet:
-#                     self.write("-10.005")
-#                     self.write("-20.005")
-#                     self.write("-10000")
-#                     self.write("Nozzle_Cal_End")
-#         print('run...end : ', self.is_run)
-
-#     def write(self, data):
-#         """Thread safe writing (uses lock)"""
-#         print('Tx :', data)
-#         delimiter = '\n'
-#         data = data + delimiter
-        
-#         self.seq.write(bytes(data, encoding='ascii'))
 
 class SerialReadThread(QThread):
     """
@@ -123,7 +87,8 @@ class SerialReadThread(QThread):
         print('QWaitCondition enter...')
         self.cond = QWaitCondition()
         print('QWaitCondition exit...')
-        self._status = False
+        self.connected = False
+        self.ready = False
         self.mutex = QMutex()
         self.serial = serial
         print('SerialReadThread __init__ exit')
@@ -140,7 +105,7 @@ class SerialReadThread(QThread):
         """
         while True:
             self.mutex.lock()
-            if not self._status:
+            if not self.connected:
                 self.cond.wait(self.mutex)
 
             buf = self.serial.readAll()
@@ -149,20 +114,13 @@ class SerialReadThread(QThread):
             self.usleep(1)
             self.mutex.unlock()
 
-    def toggle_status(self):
-        print('toggle_status')
-        self._status = not self._status
-        if self._status:
-            self.cond.wakeAll()
-
     @pyqtSlot(bool, name='setStatus')
     def set_status(self, status):
         print('set_status : ', status)
-        self._status = status
-        if self._status:
+        self.connected = status
+        if self.connected:
             self.cond.wakeAll()
 
-#class SerialController(QWidget):
 class SerialDialog(QDialog, form_class_serial):
 
     # 시리얼포트 상수 값
@@ -220,11 +178,26 @@ class SerialDialog(QDialog, form_class_serial):
         self.serial_read_thread.received_data.connect(lambda v: self.received_data.emit(v))
         self.serial_read_thread.start()
 
-        self.pushButton_Connect.clicked.connect(self.slot_clicked_connect_button)
         self.received_data.connect(self.read_data)
-        self.pushButton_Send.clicked.connect(self.write_data)
+        self.pb_connect.clicked.connect(self.on_connect_button)
+        self.pb_ping.clicked.connect(self.ping_request)
+        self.pb_clear.clicked.connect(self.on_comm_log_clear)
+        self.pb_setup_offset.clicked.connect(self.on_setup_offset_button)
+
+        self.pb_Machine_Abs.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Move_Home.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Move_Bed.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Move_N1.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Move_N1_1.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Move_N2.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Sel_N1.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Sel_N2.clicked.connect(self.on_machine_button)
+        self.pb_Machine_Gcode.clicked.connect(self.on_machine_button)
         
+        self.N2_offset = {'name':'nozzle_offset', 'x':0, 'y':0}
+
         self._fill_serial_info()
+        self.button_status_change(False)
         print('SerialDialog __init__ exit')
 
     def _fill_serial_info(self):
@@ -270,13 +243,54 @@ class SerialDialog(QDialog, form_class_serial):
         self.serial.setStopBits(stop_bits)
         return self.serial.open(QIODevice.ReadWrite)
 
-    def slot_clicked_connect_button(self):
+    def on_connect_button(self):
         if self.serial.isOpen():
             self.disconnect_serial()
         else:
             self.connect_serial()
         self.serial_read_thread.setStatus(self.serial.isOpen())
-        self.pushButton_Connect.setText({False: 'Connect', True: 'Disconnect'}[self.serial.isOpen()])
+        self.pb_ping.setEnabled(self.serial.isOpen())
+        self.pb_connect.setText({False: 'Connect', True: 'Disconnect'}[self.serial.isOpen()])
+
+    def on_machine_button(self):
+        # Command
+        self.write_data(Packet_Cmd['MACHINE_CONTROL'])
+        # Param
+        if self.sender().objectName() == 'pb_Machine_Gcode':
+            # index
+            index = Packet_Param[self.sender().objectName()][0]
+            self.write_data(index)
+            # User Gcode
+            gcode = self.lineEdit_Gcode.text()
+            gcode = gcode.replace(' ', '\n')
+            print(gcode)
+            self.write_data(gcode)
+        else:
+            # index & Fixed Gcode
+            for str in Packet_Param[self.sender().objectName()]:
+                self.write_data(str)
+        # Param End
+        self.write_data(Packet_Info['PARAM_END'])
+
+    def on_setup_offset_button(self):
+        # Command
+        self.write_data(Packet_Cmd['SETUP_OFFSET'])
+        # Param
+        self.write_data(str(round(self.N2_offset['x'], 3)))
+        self.write_data(str(round(self.N2_offset['y'], 3)))
+
+    def	button_status_change(self, status):
+        self.pb_Machine_Abs.setEnabled(status)
+        self.pb_Machine_Move_Home.setEnabled(status)
+        self.pb_Machine_Move_Bed.setEnabled(status)
+        self.pb_Machine_Move_N1.setEnabled(status)
+        self.pb_Machine_Move_N1_1.setEnabled(status)
+        self.pb_Machine_Move_N2.setEnabled(status)
+        self.pb_Machine_Sel_N1.setEnabled(status)
+        self.pb_Machine_Sel_N2.setEnabled(status)
+        self.pb_Machine_Gcode.setEnabled(status)
+        self.pb_setup_offset.setEnabled(status)
+        self.ready = status
 
     def connect_serial(self):
         print('connect_serial')
@@ -290,26 +304,47 @@ class SerialDialog(QDialog, form_class_serial):
         }
         print('serial_info :', serial_info)
         status = self._open(**serial_info)
+        if status == True: self.pb_connect.setStyleSheet("background-color: rgb(50, 255, 50)")
         return status
 
     def disconnect_serial(self):
         print('disconnect_serial')
+        self.button_status_change(False)
+        self.pb_connect.setStyleSheet("background-color: rgb(255, 50, 50)")
         return self.serial.close()
 
     @pyqtSlot(QByteArray, name="readData")
     def read_data(self, rd):
-        self.textEdit_Comm.insertPlainText(str(rd, 'ascii', 'replace'))
-        
-    def write_data(self):
-        print('write_data')
-        data = bytes([0x02]) + bytes("connected!", "utf-8") + bytes([0x03])
-        self.serial.writeData(data)
+        str(rd, 'ascii', 'replace')
+        rx_data = str(rd, 'ascii', 'replace')
+        print('Rx :', rx_data, len(rx_data))
+        rx_packet = rx_data[:len(rx_data)-2]
 
-# class SerialDialog(QDialog, form_class_serial):
-#     def __init__(self):
-#         super().__init__()
-#         self.setupUi(self)
-#         self.serial = SerialController()
+        self.textEdit_Comm.setTextColor(color_red)
+        self.textEdit_Comm.insertPlainText(str(rd, 'ascii', 'replace'))
+        self.textEdit_Comm.moveCursor(QtGui.QTextCursor.End)
+
+        # Parsing Packet
+        if Packet_Ack['MSG_PING'] in rx_packet:
+            self.write_data(Packet_Info['CONNECTED'])
+        elif Packet_Ack['MSG_READY'] in rx_packet:
+            self.button_status_change(True)
+    
+    def write_data(self, data):
+        print('Tx :', data)
+        delimiter = '\n'
+        tx_packet = data + delimiter
+        self.serial.writeData(bytes(tx_packet, "utf-8"))
+
+        self.textEdit_Comm.setTextColor(color_blue)
+        self.textEdit_Comm.insertPlainText(data+'\r\n')
+        self.textEdit_Comm.moveCursor(QtGui.QTextCursor.End)
+
+    def ping_request(self):
+        self.write_data(Packet_Cmd['PING_REQ'])
+
+    def on_comm_log_clear(self):
+        self.textEdit_Comm.clear()
 
     
-
+    

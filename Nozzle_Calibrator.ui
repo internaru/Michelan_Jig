@@ -139,7 +139,7 @@
       <x>10</x>
       <y>808</y>
       <width>921</width>
-      <height>21</height>
+      <height>16</height>
      </rect>
     </property>
     <property name="value">
@@ -768,9 +768,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>840</y>
+      <y>830</y>
       <width>251</width>
-      <height>41</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="title">
@@ -802,25 +802,25 @@
     <property name="geometry">
      <rect>
       <x>270</x>
-      <y>840</y>
+      <y>830</y>
       <width>621</width>
-      <height>41</height>
+      <height>51</height>
      </rect>
     </property>
     <property name="title">
-     <string>Calibration Result</string>
+     <string>Machine I/F</string>
     </property>
     <widget class="QPushButton" name="pushButton_Serial">
      <property name="geometry">
       <rect>
-       <x>120</x>
-       <y>10</y>
+       <x>10</x>
+       <y>20</y>
        <width>101</width>
        <height>23</height>
       </rect>
      </property>
      <property name="text">
-      <string>Send Result</string>
+      <string>Serial COMM</string>
      </property>
     </widget>
    </widget>

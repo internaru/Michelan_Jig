@@ -27,6 +27,8 @@ class WindowClass(QMainWindow, form_class) :
         super().__init__()
         self.setupUi(self)  # To use Qt Designer .ui file
 
+        self.SerialCommDlg = SerialDialog()
+
         #버튼에 기능을 연결하는 코드
         self.pushButton_Open1.clicked.connect(self.loadImage)
         self.pushButton_Open1_1.clicked.connect(self.loadImage)
@@ -65,10 +67,10 @@ class WindowClass(QMainWindow, form_class) :
         #self.on_send(Packet_Tx['CMD_PING_REQ'])
         
     def serial_comm(self):
-        self.hide()
-        self.SerialCommDlg = SerialDialog()
+        #self.hide()
+        #self.SerialCommDlg = SerialDialog()
         self.SerialCommDlg.show()
-
+        
     #def on_send(self, command):
     #    SerialThread.write(SerialThread, command)
 
@@ -297,7 +299,11 @@ class WindowClass(QMainWindow, form_class) :
         nozzle_offset_pxl = '(x:{0} y:{1})'.format(self.nozzle_offset['x'], self.nozzle_offset['y'])
         nozzle_offset_mm = '(x:{0:.3f} y:{1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], self.weight['Weight']*self.nozzle_offset['y'])
         weight = '{0:.3f} (x_diff:{1}, y_diff:{2})'.format(self.weight['Weight'], self.weight['x_diff'], self.weight['y_diff'])
-        final_result = '(x : {0:.3f} y : {1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], -self.weight['Weight']*self.nozzle_offset['y'])
+        
+        self.SerialCommDlg.N2_offset['x'] = self.weight['Weight']*self.nozzle_offset['x']
+        self.SerialCommDlg.N2_offset['y'] = -self.weight['Weight']*self.nozzle_offset['y']
+        sub_result = '(x : {0:.3f} y : {1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], -self.weight['Weight']*self.nozzle_offset['y'])
+        main_result = '(x : {0:.1f} y : {1:.1f})'.format(10*round(self.SerialCommDlg.N2_offset['x'], 1), 10*round(self.SerialCommDlg.N2_offset['y'], 1))
 
         # File Path
         self.label_FileName.setText(path)
@@ -313,7 +319,9 @@ class WindowClass(QMainWindow, form_class) :
         self.label_Nozzle_Offset_pxl.setText(nozzle_offset_pxl)
         self.label_Nozzle_Offset_mm.setText(nozzle_offset_mm)
         self.label_Weight.setText(weight)
-        self.label_Result.setText(final_result)
+        self.label_Result.setText(main_result)
+        self.SerialCommDlg.label_Result.setText(sub_result)
+        
         if self.Step == 6:
             self.label_Nozzle_Position1.setStyleSheet("Color : blue")
             self.label_Nozzle_Position1_1.setStyleSheet("Color : blue")
