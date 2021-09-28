@@ -51,7 +51,7 @@ class WindowClass(QMainWindow, form_class) :
         self.MatchingType = "pattern"   # 0:Pattern Matching, 1:Circle Matching
         self.filename = None # Will hold the image address location
         self.RIO_img = None # Will hold the temporary image for display
-        self.ROI = {'name':'ROI', 'x':920, 'y':450, 'size': 200}
+        self.ROI = {'name':'ROI', 'x':920, 'y':450  , 'size': 200}
         self.ROI_offset = {'name':'ROI_offset', 'x':0, 'y':0}
         self.ROI_hole = {'name':'ROI_hole', 'x':0, 'y':0}
         self.Matching_Offset = {'name':'Matching_Offset', 'x':0, 'y':0, 'mouse_clicked':0}
@@ -59,20 +59,9 @@ class WindowClass(QMainWindow, form_class) :
         self.nozzle_position = {'name':'nozzle_position', 'N1_x':0, 'N1_y':0, 'N1_1_x':0, 'N1_1_y':0, 'N2_x':0, 'N2_y':0} # base on entire image
         self.nozzle_offset = {'name':'nozzle_offset', 'x':0, 'y':0}
         self.weight = {'name':'weight', 'x_diff':0, 'y_diff':0, 'Weight':0.0}  # 0.02 (10mm = 500 pixel)
-
-        # Serial Comunication
-        #self.queue = queue.Queue()
-        #self.thread = SerialThread(self.queue)
-        #self.thread.start()
-        #self.on_send(Packet_Tx['CMD_PING_REQ'])
         
     def serial_comm(self):
-        #self.hide()
-        #self.SerialCommDlg = SerialDialog()
         self.SerialCommDlg.show()
-        
-    #def on_send(self, command):
-    #    SerialThread.write(SerialThread, command)
 
     def initParam(self):
         print('initParam')

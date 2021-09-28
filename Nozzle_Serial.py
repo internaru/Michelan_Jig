@@ -39,6 +39,8 @@ form_class_serial = uic.loadUiType("Nozzle_Serial.ui")[0]
 Packet_Ack = {
     'MSG_PING' : "$PING$",
     'MSG_READY' : "$READY$",
+    'MSG_DONE' : "$DONE$",
+    'MSG_UNKNOWN1' : "$ERROR1$",
     }
 
 # Packet (PC -> Machine)
@@ -51,8 +53,8 @@ Packet_Cmd = {
 
 Packet_Info = { 
     # Command
-    'CONNECTED': "&connected&",
-    'PARAM_END': "&param_end&",
+    'READY': "&ready&",
+    'PARAM_END': "&end&",
     }
 
 Packet_Param = {
@@ -88,7 +90,6 @@ class SerialReadThread(QThread):
         self.cond = QWaitCondition()
         print('QWaitCondition exit...')
         self.connected = False
-        self.ready = False
         self.mutex = QMutex()
         self.serial = serial
         print('SerialReadThread __init__ exit')
@@ -170,8 +171,6 @@ class SerialDialog(QDialog, form_class_serial):
         super().__init__()
         self.setupUi(self)
 
-        # 시리얼 인스턴스 생성
-        # 시리얼 스레드 설정 및 시작
         self.serial = QSerialPort()
         self.serial_info = QSerialPortInfo()
         self.serial_read_thread = SerialReadThread(self.serial)
@@ -179,10 +178,10 @@ class SerialDialog(QDialog, form_class_serial):
         self.serial_read_thread.start()
 
         self.received_data.connect(self.read_data)
-        self.pb_connect.clicked.connect(self.on_connect_button)
-        self.pb_ping.clicked.connect(self.ping_request)
+        self.pb_connect.clicked.connect(self.on_connect)
+        self.pb_ping.clicked.connect(self.on_ping_request)
         self.pb_clear.clicked.connect(self.on_comm_log_clear)
-        self.pb_setup_offset.clicked.connect(self.on_setup_offset_button)
+        self.pb_setup_offset.clicked.connect(self.on_setup_offset)
 
         self.pb_Machine_Abs.clicked.connect(self.on_machine_button)
         self.pb_Machine_Move_Home.clicked.connect(self.on_machine_button)
@@ -194,11 +193,18 @@ class SerialDialog(QDialog, form_class_serial):
         self.pb_Machine_Sel_N2.clicked.connect(self.on_machine_button)
         self.pb_Machine_Gcode.clicked.connect(self.on_machine_button)
         
+        self.rx_data = ""
         self.N2_offset = {'name':'nozzle_offset', 'x':0, 'y':0}
+        self.button_busy =""
+        self.listv = []
+        self.button_list_init()
+        self.button_color_init()
 
         self._fill_serial_info()
         self.button_status_change(False)
         print('SerialDialog __init__ exit')
+
+# Serial Setup #
 
     def _fill_serial_info(self):
         print('_fill_serial_info')
@@ -243,7 +249,38 @@ class SerialDialog(QDialog, form_class_serial):
         self.serial.setStopBits(stop_bits)
         return self.serial.open(QIODevice.ReadWrite)
 
-    def on_connect_button(self):
+    def button_list_init(self):
+        self.listv.append(self.pb_Machine_Abs)
+        self.listv.append(self.pb_Machine_Move_Home)
+        self.listv.append(self.pb_Machine_Move_Bed)
+        self.listv.append(self.pb_Machine_Move_N1)
+        self.listv.append(self.pb_Machine_Move_N1_1)
+        self.listv.append(self.pb_Machine_Move_N2)
+        self.listv.append(self.pb_Machine_Sel_N1)
+        self.listv.append(self.pb_Machine_Sel_N2)
+        self.listv.append(self.pb_Machine_Gcode)
+
+# Button Handling #
+   
+    def	button_status_change(self, status):
+        for i in self.listv:
+            i.setEnabled(status)
+
+    def	button_color_init(self):
+        for i in self.listv:
+            i.setStyleSheet("background-color: rgb(200, 200, 200)")
+
+    def button_color_set(self, busy, name):
+        for i in self.listv:
+            if i.objectName() == name:
+                if busy == True:
+                    i.setStyleSheet("background-color: rgb(200, 100, 100)")
+                else:
+                    i.setStyleSheet("background-color: rgb(100, 200, 100)")
+            else:
+                i.setStyleSheet("background-color: rgb(200, 200, 200)")
+
+    def on_connect(self):
         if self.serial.isOpen():
             self.disconnect_serial()
         else:
@@ -253,7 +290,7 @@ class SerialDialog(QDialog, form_class_serial):
         self.pb_connect.setText({False: 'Connect', True: 'Disconnect'}[self.serial.isOpen()])
 
     def on_machine_button(self):
-        # Command
+        # Command   
         self.write_data(Packet_Cmd['MACHINE_CONTROL'])
         # Param
         if self.sender().objectName() == 'pb_Machine_Gcode':
@@ -272,25 +309,24 @@ class SerialDialog(QDialog, form_class_serial):
         # Param End
         self.write_data(Packet_Info['PARAM_END'])
 
-    def on_setup_offset_button(self):
+        self.button_busy = self.sender().objectName()
+        self.button_color_set(True, self.button_busy)
+        self.button_status_change(False)
+
+    def on_setup_offset(self):
         # Command
         self.write_data(Packet_Cmd['SETUP_OFFSET'])
         # Param
         self.write_data(str(round(self.N2_offset['x'], 3)))
         self.write_data(str(round(self.N2_offset['y'], 3)))
 
-    def	button_status_change(self, status):
-        self.pb_Machine_Abs.setEnabled(status)
-        self.pb_Machine_Move_Home.setEnabled(status)
-        self.pb_Machine_Move_Bed.setEnabled(status)
-        self.pb_Machine_Move_N1.setEnabled(status)
-        self.pb_Machine_Move_N1_1.setEnabled(status)
-        self.pb_Machine_Move_N2.setEnabled(status)
-        self.pb_Machine_Sel_N1.setEnabled(status)
-        self.pb_Machine_Sel_N2.setEnabled(status)
-        self.pb_Machine_Gcode.setEnabled(status)
-        self.pb_setup_offset.setEnabled(status)
-        self.ready = status
+    def on_ping_request(self):
+        self.write_data(Packet_Cmd['PING_REQ'])
+
+    def on_comm_log_clear(self):
+        self.textEdit_Comm.clear()
+
+# Connection Handling #
 
     def connect_serial(self):
         print('connect_serial')
@@ -304,6 +340,7 @@ class SerialDialog(QDialog, form_class_serial):
         }
         print('serial_info :', serial_info)
         status = self._open(**serial_info)
+        #self.button_status_change(True)
         if status == True: self.pb_connect.setStyleSheet("background-color: rgb(50, 255, 50)")
         return status
 
@@ -313,22 +350,46 @@ class SerialDialog(QDialog, form_class_serial):
         self.pb_connect.setStyleSheet("background-color: rgb(255, 50, 50)")
         return self.serial.close()
 
+# Packet Handling #
+
     @pyqtSlot(QByteArray, name="readData")
     def read_data(self, rd):
-        str(rd, 'ascii', 'replace')
         rx_data = str(rd, 'ascii', 'replace')
-        print('Rx :', rx_data, len(rx_data))
-        rx_packet = rx_data[:len(rx_data)-2]
+        last_char = rx_data[-1:]
+        
+        print('Rx : {0}, {1}'.format(len(rx_data), rx_data), end="")
+
+        if last_char == '\n':
+            self.rx_data = self.rx_data + rx_data
+            if self.rx_data.count('\n') > 1:
+                print('multi packet...')
+        else:
+            self.rx_data = rx_data
+            print('\nwait more data...')
+            return;
 
         self.textEdit_Comm.setTextColor(color_red)
-        self.textEdit_Comm.insertPlainText(str(rd, 'ascii', 'replace'))
+        self.textEdit_Comm.insertPlainText(self.rx_data)
         self.textEdit_Comm.moveCursor(QtGui.QTextCursor.End)
 
         # Parsing Packet
-        if Packet_Ack['MSG_PING'] in rx_packet:
-            self.write_data(Packet_Info['CONNECTED'])
-        elif Packet_Ack['MSG_READY'] in rx_packet:
+        if Packet_Ack['MSG_PING'] in self.rx_data:
+            self.write_data(Packet_Info['READY'])
+        elif Packet_Ack['MSG_READY'] in self.rx_data:
             self.button_status_change(True)
+        elif Packet_Ack['MSG_DONE'] in self.rx_data:
+            self.button_status_change(True)
+            self.button_color_set(False, self.button_busy)
+        elif Packet_Ack['MSG_UNKNOWN1'] in self.rx_data:
+            QMessageBox.warning(self, "message", "Comm Error!! : MSG_UNKNOWN1")
+        else:
+            QMessageBox.warning(self, "message", "Comm Error!! : Header Not Found")
+
+        # Particial Packet
+        if len(rx_data) != len(self.rx_data):
+            print('Rx(sum) : {0}, {1}'.format(len(self.rx_data), self.rx_data), end="")
+
+        self.rx_data = ""
     
     def write_data(self, data):
         print('Tx :', data)
@@ -339,12 +400,3 @@ class SerialDialog(QDialog, form_class_serial):
         self.textEdit_Comm.setTextColor(color_blue)
         self.textEdit_Comm.insertPlainText(data+'\r\n')
         self.textEdit_Comm.moveCursor(QtGui.QTextCursor.End)
-
-    def ping_request(self):
-        self.write_data(Packet_Cmd['PING_REQ'])
-
-    def on_comm_log_clear(self):
-        self.textEdit_Comm.clear()
-
-    
-    
