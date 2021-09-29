@@ -10,7 +10,6 @@ from matplotlib import pyplot as plt
 import logging
 import winsound
 
-import queue
 from Nozzle_Serial import *
 
 camera_type = 2                    # 1 : 1920x1080, 2 : 3840x2160
@@ -289,10 +288,11 @@ class WindowClass(QMainWindow, form_class) :
         nozzle_offset_mm = '(x:{0:.3f} y:{1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], self.weight['Weight']*self.nozzle_offset['y'])
         weight = '{0:.3f} (x_diff:{1}, y_diff:{2})'.format(self.weight['Weight'], self.weight['x_diff'], self.weight['y_diff'])
         
-        self.SerialCommDlg.N2_offset['x'] = self.weight['Weight']*self.nozzle_offset['x']
-        self.SerialCommDlg.N2_offset['y'] = -self.weight['Weight']*self.nozzle_offset['y']
-        sub_result = '(x : {0:.3f} y : {1:.3f})'.format(self.weight['Weight']*self.nozzle_offset['x'], -self.weight['Weight']*self.nozzle_offset['y'])
-        main_result = '(x : {0:.1f} y : {1:.1f})'.format(10*round(self.SerialCommDlg.N2_offset['x'], 1), 10*round(self.SerialCommDlg.N2_offset['y'], 1))
+        N2_offset_mm_x = self.weight['Weight']*self.nozzle_offset['x']
+        N2_offset_mm_y = -self.weight['Weight']*self.nozzle_offset['y']
+        self.SerialCommDlg.N2_offset['x'] = round(10*N2_offset_mm_x)
+        self.SerialCommDlg.N2_offset['y'] = round(10*N2_offset_mm_y)
+        result = '(x : {0} y : {1})'.format(self.SerialCommDlg.N2_offset['x'], self.SerialCommDlg.N2_offset['y'])
 
         # File Path
         self.label_FileName.setText(path)
@@ -308,8 +308,8 @@ class WindowClass(QMainWindow, form_class) :
         self.label_Nozzle_Offset_pxl.setText(nozzle_offset_pxl)
         self.label_Nozzle_Offset_mm.setText(nozzle_offset_mm)
         self.label_Weight.setText(weight)
-        self.label_Result.setText(main_result)
-        self.SerialCommDlg.label_Result.setText(sub_result)
+        self.label_Result.setText(result)
+        self.SerialCommDlg.label_Result.setText(result)
         
         if self.Step == 6:
             self.label_Nozzle_Position1.setStyleSheet("Color : blue")
