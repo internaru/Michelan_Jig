@@ -290,9 +290,9 @@ class WindowClass(QMainWindow, form_class) :
         
         N2_offset_mm_x = self.weight['Weight']*self.nozzle_offset['x']
         N2_offset_mm_y = -self.weight['Weight']*self.nozzle_offset['y']
-        self.SerialCommDlg.N2_offset['x'] = round(10*N2_offset_mm_x)
-        self.SerialCommDlg.N2_offset['y'] = round(10*N2_offset_mm_y)
-        result = '(x : {0} y : {1})'.format(self.SerialCommDlg.N2_offset['x'], self.SerialCommDlg.N2_offset['y'])
+        self.SerialCommDlg.N2_offset_W['x'] = round(10*N2_offset_mm_x)
+        self.SerialCommDlg.N2_offset_W['y'] = round(10*N2_offset_mm_y)
+        result = '(x : {0}, y : {1})'.format(self.SerialCommDlg.N2_offset_W['x'], self.SerialCommDlg.N2_offset_W['y'])
 
         # File Path
         self.label_FileName.setText(path)
@@ -308,9 +308,9 @@ class WindowClass(QMainWindow, form_class) :
         self.label_Nozzle_Offset_pxl.setText(nozzle_offset_pxl)
         self.label_Nozzle_Offset_mm.setText(nozzle_offset_mm)
         self.label_Weight.setText(weight)
-        self.label_Result.setText(result)
-        self.SerialCommDlg.label_Result.setText(result)
-        
+        self.label_Offset_W.setText(result)
+        self.SerialCommDlg.label_Offset_W.setText(result)
+        # Text Color Setup
         if self.Step == 6:
             self.label_Nozzle_Position1.setStyleSheet("Color : blue")
             self.label_Nozzle_Position1_1.setStyleSheet("Color : blue")
@@ -318,7 +318,6 @@ class WindowClass(QMainWindow, form_class) :
             self.label_Nozzle_Offset_pxl.setStyleSheet("Color : green")
             self.label_Nozzle_Offset_mm.setStyleSheet("Color : green")
             self.label_Weight.setStyleSheet("Color : green")
-            self.label_Result.setStyleSheet("Color : red")
         else:
             self.label_Nozzle_Position1.setStyleSheet("Color : black")
             self.label_Nozzle_Position1_1.setStyleSheet("Color : black")
@@ -326,7 +325,15 @@ class WindowClass(QMainWindow, form_class) :
             self.label_Nozzle_Offset_pxl.setStyleSheet("Color : black")
             self.label_Nozzle_Offset_mm.setStyleSheet("Color : black")
             self.label_Weight.setStyleSheet("Color : black")
-            self.label_Result.setStyleSheet("Color : black")
+        
+        if self.SerialCommDlg.N2_offset_W['x'] < 20 and self.SerialCommDlg.N2_offset_W['x'] >-20 and \
+           self.SerialCommDlg.N2_offset_W['y'] < 20 and self.SerialCommDlg.N2_offset_W['y'] >-20 :
+            self.SerialCommDlg.label_Offset_W.setStyleSheet("Color : green")
+            self.label_Offset_W.setStyleSheet("Color : green")
+        else:
+            self.SerialCommDlg.label_Offset_W.setStyleSheet("Color : red")
+            self.label_Offset_W.setStyleSheet("Color : red")
+
 
     def updateStep(self):
         print('self.Step (before):', self.Step)
@@ -603,7 +610,7 @@ class WindowClass(QMainWindow, form_class) :
                             (bottom_right[0]+self.Matching_Offset['x'], bottom_right[1]+self.Matching_Offset['y']), (0,0,255), 1)
                     else:
                         cv2.circle(img_draw, (round((top_left[0]+bottom_right[0])/2) + self.Matching_Offset['x'], \
-                            round((top_left[1]+bottom_right[1])/2) + self.Matching_Offset['y']), 10, (0, 0, 255), 1) 
+                            round((top_left[1]+bottom_right[1])/2) + self.Matching_Offset['y']), 20, (0, 0, 255), 1) 
                     
                     img_draw = imutils.resize(img_draw, width=800)
                     text = "Center : X {0}, Y {1}".format(round((top_left[0]+bottom_right[0])/2) + self.Matching_Offset['x'], round((top_left[1]+bottom_right[1])/2) + self.Matching_Offset['y'])

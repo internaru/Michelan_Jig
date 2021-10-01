@@ -776,7 +776,7 @@
     <property name="title">
      <string>Calibration Result</string>
     </property>
-    <widget class="QLabel" name="label_Result">
+    <widget class="QLabel" name="label_Offset_W">
      <property name="geometry">
       <rect>
        <x>10</x>

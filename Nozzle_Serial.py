@@ -4,6 +4,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import *
 
 import sys
+import re
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QBoxLayout
@@ -33,10 +34,13 @@ form_class_serial = uic.loadUiType("Nozzle_Serial.ui")[0]
 
 # Packet (Machine -> PC)
 Packet_Ack = {
-    'MSG_PING' : "$PING$",
-    'MSG_READY' : "$READY$",
-    'MSG_DONE' : "$DONE$",
-    'MSG_UNKNOWN1' : "$ERROR1$",
+    'RES_PING' : "$PING$",
+    'RES_READY' : "$READY$",
+    'RES_DONE' : "$DONE$",
+    'RES_ERROR' : "$ERROR$",
+    }
+Packet_Info = {
+    'INFO_OFFSET' : "$INFO_OFFSET$",
     }
 
 # Packet (PC -> Machine)
@@ -46,13 +50,12 @@ Packet_Cmd = {
     'SETUP_OFFSET': "&setup_offset&",
     'MACHINE_CONTROL': "&machine_ctrl&",
     }
-
-Packet_Info = { 
+Packet_Status = { 
     # Command
     'READY': "&ready&",
-    'PARAM_END': "&end&",
+    'BUSY': "&busy&",
+    'ERROR': "&err&",
     }
-
 Packet_Param = {
     # Machine Control
     'pb_Machine_Abs': ["1", "G90"],
@@ -177,7 +180,9 @@ class SerialDialog(QDialog, form_class_serial):
         self.pb_connect.clicked.connect(self.on_connect)
         self.pb_ping.clicked.connect(self.on_ping_request)
         self.pb_clear.clicked.connect(self.on_comm_log_clear)
-        self.pb_setup_offset.clicked.connect(self.on_setup_offset)
+        self.pb_setup_offset_W.clicked.connect(self.on_setup_offset)
+        self.pb_setup_offset_R.clicked.connect(self.on_setup_offset)
+        self.pb_setup_offset_Reset.clicked.connect(self.on_setup_offset)
 
         self.pb_Machine_Abs.clicked.connect(self.on_machine_button)
         self.pb_Machine_Move_Home.clicked.connect(self.on_machine_button)
@@ -190,7 +195,8 @@ class SerialDialog(QDialog, form_class_serial):
         self.pb_Machine_Gcode.clicked.connect(self.on_machine_button)
         
         self.rx_data = ""
-        self.N2_offset = {'name':'nozzle_offset', 'x':0, 'y':0}
+        self.N2_offset_W = {'name':'nozzle_offset', 'x':0, 'y':0}   # unit 0.1mm, 10 == 1mm
+        self.N2_offset_R = {'name':'nozzle_offset', 'x':0.0, 'y':0.0}   # unit 1mm, 10 == 10mm
         self.button_busy =""
         self.listv = []
         self.button_list_init()
@@ -303,18 +309,45 @@ class SerialDialog(QDialog, form_class_serial):
             for str in Packet_Param[self.sender().objectName()]:
                 self.write_data(str)
         # Param End
-        self.write_data(Packet_Info['PARAM_END'])
+        self.write_data("&end&")
 
         self.button_busy = self.sender().objectName()
         self.button_color_set(True, self.button_busy)
         self.button_status_change(False)
 
     def on_setup_offset(self):
-        # Command
-        self.write_data(Packet_Cmd['SETUP_OFFSET'])
-        # Param
-        self.write_data(str(round(self.N2_offset['x'], 3)))
-        self.write_data(str(round(self.N2_offset['y'], 3)))
+
+        # Offset Write
+        if self.sender().objectName() == 'pb_setup_offset_W':
+            offset_x = self.N2_offset_W['x']
+            offset_y = self.N2_offset_W['y']
+
+            # Check Param
+            if not (offset_x < 20 and offset_x >-20 and offset_y < 20 and offset_y >-20) :
+                QMessageBox.warning(self, "message", "offset limit range (-20 ~ 20)")
+                return
+            
+            # Command
+            self.write_data(Packet_Cmd['SETUP_OFFSET'])
+            # Param
+            self.write_data('W')
+            self.write_data(str(round(self.N2_offset_W['x'], 3)))
+            self.write_data(str(round(self.N2_offset_W['y'], 3)))
+            self.label_Offset_R.setText('Updating...')
+                
+        elif self.sender().objectName() == 'pb_setup_offset_R':
+            # Command
+            self.write_data(Packet_Cmd['SETUP_OFFSET'])
+            # Param
+            self.write_data('R')
+            self.label_Offset_R.setText('Reading...')
+        
+        elif self.sender().objectName() == 'pb_setup_offset_Reset':
+            # Command
+            self.write_data(Packet_Cmd['SETUP_OFFSET'])
+            # Param
+            self.write_data('I')
+            self.label_Offset_R.setText('Reading...')
 
     def on_ping_request(self):
         self.write_data(Packet_Cmd['PING_REQ'])
@@ -336,7 +369,6 @@ class SerialDialog(QDialog, form_class_serial):
         }
         print('serial_info :', serial_info)
         status = self._open(**serial_info)
-        #self.button_status_change(True)
         if status == True: self.pb_connect.setStyleSheet("background-color: rgb(50, 255, 50)")
         return status
 
@@ -369,15 +401,27 @@ class SerialDialog(QDialog, form_class_serial):
         self.textEdit_Comm.moveCursor(QtGui.QTextCursor.End)
 
         # Parsing Packet
-        if Packet_Ack['MSG_PING'] in self.rx_data:
-            self.write_data(Packet_Info['READY'])
-        elif Packet_Ack['MSG_READY'] in self.rx_data:
+        if Packet_Ack['RES_PING'] in self.rx_data:
+            self.write_data(Packet_Status['READY'])
+        elif Packet_Ack['RES_READY'] in self.rx_data:
             self.button_status_change(True)
-        elif Packet_Ack['MSG_DONE'] in self.rx_data:
+            # Read Machine Offset
+            self.write_data(Packet_Cmd['SETUP_OFFSET'])
+            self.write_data('R')
+            self.label_Offset_R.setText('Reading...')
+        elif Packet_Ack['RES_DONE'] in self.rx_data:
             self.button_status_change(True)
             self.button_color_set(False, self.button_busy)
-        elif Packet_Ack['MSG_UNKNOWN1'] in self.rx_data:
-            QMessageBox.warning(self, "message", "Comm Error!! : MSG_UNKNOWN1")
+        elif Packet_Info['INFO_OFFSET'] in self.rx_data:
+            params = re.findall(r"[-+]?\d*\.\d+|\d+", self.rx_data)
+            print(params)
+            self.N2_offset_R['x'] = params[0]
+            self.N2_offset_R['y'] = params[1]
+            result = '(x : {0:.3f}, y : {1:.3f})'.format(float(params[0]), float(params[1]))
+            self.label_Offset_R.setText(result)
+            
+        elif Packet_Ack['RES_UNKNOWN1'] in self.rx_data:
+            QMessageBox.warning(self, "message", "Comm Error!! : RES_UNKNOWN1")
         else:
             QMessageBox.warning(self, "message", "Comm Error!! : Header Not Found")
 
