@@ -740,7 +740,7 @@ if __name__ == "__main__" :
     myWindow.show()
     app.exec_()
 
-# https://gozz123.tistory.com/29
+# https://opentutorials.org/module/544/19046
 # https://github-wiki-see.page/m/8BitsCoding/RobotMentor/wiki/python_pyserial
 # https://m.blog.naver.com/PostView.naver?isHttpsRedirect=true&blogId=chandong83&logNo=221156763486
 # https://m.blog.naver.com/rhukjin/222040320807

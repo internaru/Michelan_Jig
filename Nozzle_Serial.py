@@ -5,6 +5,7 @@ from PyQt5.QtGui import *
 
 import sys
 import re
+import serial
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QBoxLayout
@@ -82,15 +83,13 @@ class SerialReadThread(QThread):
     # 받은 데이터 그대로를 전달 해주기 위해 QByteArray 형태로 전달
     received_data = pyqtSignal(QByteArray, name="receivedData")
 
-    def __init__(self, serial):
+    def __init__(self, ser):
         print('SerialReadThread __init__ enter')
         QThread.__init__(self)
-        print('QWaitCondition enter...')
         self.cond = QWaitCondition()
-        print('QWaitCondition exit...')
         self.connected = False
         self.mutex = QMutex()
-        self.serial = serial
+        self.seq = ser
         print('SerialReadThread __init__ exit')
 
     def __del__(self):
@@ -108,9 +107,13 @@ class SerialReadThread(QThread):
             if not self.connected:
                 self.cond.wait(self.mutex)
 
-            buf = self.serial.readAll()
-            if buf:
-                self.received_data.emit(buf)
+            if self.seq.inWaiting():
+                print('inWaiting exit')
+                buf = self.seq.readline(self.seq.inWaiting())
+                #buf = seq.read(seq.inWaiting()).decode('ascii')
+                if buf:
+                    self.received_data.emit(buf)
+
             self.usleep(1)
             self.mutex.unlock()
 
@@ -120,6 +123,9 @@ class SerialReadThread(QThread):
         self.connected = status
         if self.connected:
             self.cond.wakeAll()
+        else:
+            if hasattr(self.seq, 'cancel_read'):
+                self.seq.cancel_read()
 
 class SerialDialog(QDialog, form_class_serial):
 
@@ -170,9 +176,10 @@ class SerialDialog(QDialog, form_class_serial):
         super().__init__()
         self.setupUi(self)
 
-        self.serial = QSerialPort()
+        self.ser = serial.Serial()      # For Serial Communication
+        self.Qserial = QSerialPort()    # For Serial Port Check
         self.serial_info = QSerialPortInfo()
-        self.serial_read_thread = SerialReadThread(self.serial)
+        self.serial_read_thread = SerialReadThread(self.ser)
         self.serial_read_thread.received_data.connect(lambda v: self.received_data.emit(v))
         self.serial_read_thread.start()
 
@@ -198,7 +205,8 @@ class SerialDialog(QDialog, form_class_serial):
         self.N2_offset_W = {'name':'nozzle_offset', 'x':0, 'y':0}   # unit 0.1mm, 10 == 1mm
         self.N2_offset_R = {'name':'nozzle_offset', 'x':0.0, 'y':0.0}   # unit 1mm, 10 == 10mm
         self.button_busy =""
-        self.listv = []
+        self.list_machine = []
+        self.list_setup = []
         self.button_list_init()
         self.button_color_init()
 
@@ -236,44 +244,75 @@ class SerialDialog(QDialog, form_class_serial):
             if not self._open(port_name):
                 continue
             available_port.append(port_name)
-            self.serial.close()
+            self.Qserial.close()
         return available_port
 
     def _open(self, port_name, baudrate=QSerialPort.Baud115200, data_bits=QSerialPort.Data8,
               flow_control=QSerialPort.NoFlowControl, parity=QSerialPort.NoParity, stop_bits=QSerialPort.OneStop):
         print('_open')
         info = QSerialPortInfo(port_name)
-        self.serial.setPort(info)
-        self.serial.setBaudRate(baudrate)
-        self.serial.setDataBits(data_bits)
-        self.serial.setFlowControl(flow_control)
-        self.serial.setParity(parity)
-        self.serial.setStopBits(stop_bits)
-        return self.serial.open(QIODevice.ReadWrite)
+        self.Qserial.setPort(info)
+        self.Qserial.setBaudRate(baudrate)
+        self.Qserial.setDataBits(data_bits)
+        self.Qserial.setFlowControl(flow_control)
+        self.Qserial.setParity(parity)
+        self.Qserial.setStopBits(stop_bits)
+        return self.Qserial.open(QIODevice.ReadWrite)
+
+    def openSerial(self, port_name, baudrate=115200, data_bits=serial.EIGHTBITS,
+              flow_control=False, parity=serial.PARITY_NONE, stop_bits=serial.STOPBITS_ONE):
+        self.ser.port = port_name
+        self.ser.baudrate = baudrate
+        self.ser.bytesize = data_bits
+        self.ser.xonxoff = flow_control
+        self.ser.parity = serial.PARITY_NONE
+        self.ser.stopbits = stop_bits
+
+        self.ser.timeout = None
+        self.ser.rtscts = False
+        self.ser.dsrdtr = False
+        self.ser.open()
 
     def button_list_init(self):
-        self.listv.append(self.pb_Machine_Abs)
-        self.listv.append(self.pb_Machine_Move_Home)
-        self.listv.append(self.pb_Machine_Move_Bed)
-        self.listv.append(self.pb_Machine_Move_N1)
-        self.listv.append(self.pb_Machine_Move_N1_1)
-        self.listv.append(self.pb_Machine_Move_N2)
-        self.listv.append(self.pb_Machine_Sel_N1)
-        self.listv.append(self.pb_Machine_Sel_N2)
-        self.listv.append(self.pb_Machine_Gcode)
+        # machine control
+        self.list_machine.append(self.pb_Machine_Abs)
+        self.list_machine.append(self.pb_Machine_Move_Home)
+        self.list_machine.append(self.pb_Machine_Move_Bed)
+        self.list_machine.append(self.pb_Machine_Move_N1)
+        self.list_machine.append(self.pb_Machine_Move_N1_1)
+        self.list_machine.append(self.pb_Machine_Move_N2)
+        self.list_machine.append(self.pb_Machine_Sel_N1)
+        self.list_machine.append(self.pb_Machine_Sel_N2)
+        self.list_machine.append(self.pb_Machine_Gcode)
+        # setup
+        self.list_setup.append(self.pb_setup_offset_W)
+        self.list_setup.append(self.pb_setup_offset_R)
+        self.list_setup.append(self.pb_setup_offset_Reset)
 
 # Button Handling #
    
     def	button_status_change(self, status):
-        for i in self.listv:
+        for i in self.list_machine:
+            i.setEnabled(status)
+        for i in self.list_setup:
             i.setEnabled(status)
 
     def	button_color_init(self):
-        for i in self.listv:
+        for i in self.list_machine:
+            i.setStyleSheet("background-color: rgb(200, 200, 200)")
+        for i in self.list_setup:
             i.setStyleSheet("background-color: rgb(200, 200, 200)")
 
     def button_color_set(self, busy, name):
-        for i in self.listv:
+        for i in self.list_machine:
+            if i.objectName() == name:
+                if busy == True:
+                    i.setStyleSheet("background-color: rgb(200, 100, 100)")
+                else:
+                    i.setStyleSheet("background-color: rgb(100, 200, 100)")
+            else:
+                i.setStyleSheet("background-color: rgb(200, 200, 200)")
+        for i in self.list_setup:
             if i.objectName() == name:
                 if busy == True:
                     i.setStyleSheet("background-color: rgb(200, 100, 100)")
@@ -283,13 +322,14 @@ class SerialDialog(QDialog, form_class_serial):
                 i.setStyleSheet("background-color: rgb(200, 200, 200)")
 
     def on_connect(self):
-        if self.serial.isOpen():
+        if self.ser.is_open:
+            self.serial_read_thread.setStatus(False)
             self.disconnect_serial()
         else:
             self.connect_serial()
-        self.serial_read_thread.setStatus(self.serial.isOpen())
-        self.pb_ping.setEnabled(self.serial.isOpen())
-        self.pb_connect.setText({False: 'Connect', True: 'Disconnect'}[self.serial.isOpen()])
+            self.serial_read_thread.setStatus(self.ser.is_open)
+        self.pb_ping.setEnabled(self.ser.is_open)
+        self.pb_connect.setText({False: 'Connect', True: 'Disconnect'}[self.ser.is_open])
 
     def on_machine_button(self):
         # Command   
@@ -349,6 +389,10 @@ class SerialDialog(QDialog, form_class_serial):
             self.write_data('I')
             self.label_Offset_R.setText('Reading...')
 
+        self.button_busy = self.sender().objectName()
+        self.button_color_set(True, self.button_busy)
+        self.button_status_change(False)
+
     def on_ping_request(self):
         self.write_data(Packet_Cmd['PING_REQ'])
 
@@ -368,15 +412,18 @@ class SerialDialog(QDialog, form_class_serial):
             "stop_bits": self.STOPBITS[self.cb_stop_bits.currentIndex()],
         }
         print('serial_info :', serial_info)
-        status = self._open(**serial_info)
-        if status == True: self.pb_connect.setStyleSheet("background-color: rgb(50, 255, 50)")
-        return status
+        self.openSerial(**serial_info)
+        if self.ser.is_open == True: 
+            self.pb_connect.setStyleSheet("background-color: rgb(50, 255, 50)")
+
 
     def disconnect_serial(self):
         print('disconnect_serial')
-        self.button_status_change(False)
-        self.pb_connect.setStyleSheet("background-color: rgb(255, 50, 50)")
-        return self.serial.close()
+        self.ser.close()
+        if self.ser.is_open == False: 
+            self.pb_connect.setStyleSheet("background-color: rgb(255, 50, 50)")
+            self.button_status_change(False)
+        
 
 # Packet Handling #
 
@@ -404,7 +451,6 @@ class SerialDialog(QDialog, form_class_serial):
         if Packet_Ack['RES_PING'] in self.rx_data:
             self.write_data(Packet_Status['READY'])
         elif Packet_Ack['RES_READY'] in self.rx_data:
-            self.button_status_change(True)
             # Read Machine Offset
             self.write_data(Packet_Cmd['SETUP_OFFSET'])
             self.write_data('R')
@@ -435,7 +481,8 @@ class SerialDialog(QDialog, form_class_serial):
         print('Tx :', data)
         delimiter = '\n'
         tx_packet = data + delimiter
-        self.serial.writeData(bytes(tx_packet, "utf-8"))
+        #self.Qserial.writeData(bytes(tx_packet, "utf-8"))
+        self.ser.write(bytes(tx_packet, encoding='ascii'))
 
         self.textEdit_Comm.setTextColor(color_blue)
         self.textEdit_Comm.insertPlainText(data+'\r\n')

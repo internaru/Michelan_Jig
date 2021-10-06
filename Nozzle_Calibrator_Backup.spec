@@ -12,11 +12,7 @@ a = Analysis(['Nozzle_Calibrator.py'],
                 ('./*.wav','./'),
                 ('./*.ico','./')
              ],
-             hiddenimports=[
-                'PyQt5.QtGui',
-                'PyQt5.uic',
-                'matplotlib.pyplot',
-             ],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

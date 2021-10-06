@@ -14,11 +14,14 @@
    <string>Dialog</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>460</x>
      <y>440</y>
-     <width>621</width>
+     <width>171</width>
      <height>32</height>
     </rect>
    </property>
@@ -26,7 +29,7 @@
     <enum>Qt::Horizontal</enum>
    </property>
    <property name="standardButtons">
-    <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+    <set>QDialogButtonBox::Ok</set>
    </property>
   </widget>
   <widget class="QGroupBox" name="groupBox">
@@ -235,7 +238,7 @@
      <x>230</x>
      <y>10</y>
      <width>391</width>
-     <height>311</height>
+     <height>261</height>
     </rect>
    </property>
    <property name="title">
@@ -345,32 +348,6 @@
      <string>Nozzle2 Move</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_Gcode">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>280</y>
-      <width>141</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Enter G-Code</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pb_Machine_Gcode">
-    <property name="geometry">
-     <rect>
-      <x>180</x>
-      <y>280</y>
-      <width>75</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Send</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="step1">
     <property name="geometry">
      <rect>
@@ -473,32 +450,6 @@
     </property>
     <property name="text">
      <string>8</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="step9">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>280</y>
-      <width>16</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>9</string>
-    </property>
-   </widget>
-   <widget class="Line" name="line">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>260</y>
-      <width>391</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
     </property>
    </widget>
    <widget class="QLabel" name="label_code1">
@@ -698,6 +649,45 @@
    </property>
    <property name="text">
     <string>clear</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit_Gcode">
+   <property name="geometry">
+    <rect>
+     <x>410</x>
+     <y>280</y>
+     <width>141</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enter G-Code</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="step9">
+   <property name="geometry">
+    <rect>
+     <x>240</x>
+     <y>280</y>
+     <width>16</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>9</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pb_Machine_Gcode">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>280</y>
+     <width>141</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>G-Code</string>
    </property>
   </widget>
  </widget>

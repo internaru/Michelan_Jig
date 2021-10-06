@@ -12,11 +12,7 @@ a = Analysis(['Nozzle_Calibrator.py'],
                 ('./*.wav','./'),
                 ('./*.ico','./')
              ],
-             hiddenimports=[
-                'PyQt5.QtGui',
-                'PyQt5.uic',
-                'matplotlib.pyplot'
-             ],
+             hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -31,11 +27,11 @@ exe = EXE(pyz,
           [],
           exclude_binaries=True,
           name='Nozzle_Calibrator',
-          debug=True,
+          debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=True , icon='icon_final.ico')
+          console=False , icon='icon_final.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
