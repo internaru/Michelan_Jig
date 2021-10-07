@@ -27,11 +27,11 @@ exe = EXE(pyz,
           [],
           exclude_binaries=True,
           name='Nozzle_Calibrator',
-          debug=False,
+          debug=True,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False , icon='icon_final.ico')
+          console=True , icon='icon_final.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,

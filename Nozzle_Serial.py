@@ -1,31 +1,17 @@
-from PyQt5.QtWidgets import *
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5 import uic
-from PyQt5.QtGui import *
-
-import sys
 import re
+import sys
 import serial
 
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QBoxLayout
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QGroupBox
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QThread
-from PyQt5.QtSerialPort import QSerialPort
-from PyQt5.QtSerialPort import QSerialPortInfo
-from PyQt5.QtCore import QIODevice
-from PyQt5.QtCore import QWaitCondition
-from PyQt5.QtCore import QMutex
-from PyQt5.QtCore import QByteArray
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QTextEdit
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5.QtCore import (QByteArray, QIODevice, QMutex, Qt, QThread,
+                          QWaitCondition, pyqtSignal, pyqtSlot)
+from PyQt5.QtGui import *
+from PyQt5.QtSerialPort import QSerialPort, QSerialPortInfo
+from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import (QApplication, QBoxLayout, QComboBox, QGridLayout,
+                             QGroupBox, QLabel, QPushButton, QTextEdit,
+                             QWidget)
+
 
 __author__ = "Seunghwan Lee <seunghwanlee@sindoh.com>"
 __platform__ = sys.platform
@@ -466,7 +452,7 @@ class SerialDialog(QDialog, form_class_serial):
             result = '(x : {0:.3f}, y : {1:.3f})'.format(float(params[0]), float(params[1]))
             self.label_Offset_R.setText(result)
             
-        elif Packet_Ack['RES_UNKNOWN1'] in self.rx_data:
+        elif Packet_Ack['RES_ERROR'] in self.rx_data:
             QMessageBox.warning(self, "message", "Comm Error!! : RES_UNKNOWN1")
         else:
             QMessageBox.warning(self, "message", "Comm Error!! : Header Not Found")
